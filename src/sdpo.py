@@ -3,8 +3,8 @@ import re
 from datasets import load_dataset
 from unsloth import FastLanguageModel
 # Import the official implementation from Hugging Face's TRL ecosystem
-from trl.experimental.sdpo import SDPOConfig, SDPOTrainer 
-
+from trl.experimental import SDPOConfig, SDPOTrainer 
+import torch
 
 # Trackio will automatically pull these and update your public dashboard live
 os.environ["TRACKIO_PROJECT"] = "sdpo-math-reasoning"

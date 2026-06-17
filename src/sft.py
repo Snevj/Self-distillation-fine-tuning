@@ -1,6 +1,6 @@
 
 from unsloth import FastLanguageModel
-from trl import SFTTrainer
+from trl import SFTTrainer, SFTConfig
 from transformers import TrainingArguments
 from datasets import load_dataset
 import torch 
