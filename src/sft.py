@@ -14,7 +14,7 @@ os.environ["TRACKIO_PROJECT"] = "my-sdpo-alignment"
 os.environ["TRACKIO_SPACE_ID"] = "Snevj/my-training-dashboard"
 
 
-# 1. Load the raw base model (e.g., Llama 3 or Qwen)
+# Loading the 4-bit quantized base model (LLaMA 3 8B in this case, but you can use any supported model)
 model, tokenizer = FastLanguageModel.from_pretrained(
     model_name = "unsloth/llama-3-8b-bnb-4bit",
     max_seq_length = 2048,
@@ -22,7 +22,7 @@ model, tokenizer = FastLanguageModel.from_pretrained(
     load_in_4bit = True,
 )
 
-# 2. Add LoRA Adapters (so you are only training ~2% of the model)
+# Adding the LoRA adapter to the model
 model = FastLanguageModel.get_peft_model(
     model,
     r = 16,
@@ -32,10 +32,10 @@ model = FastLanguageModel.get_peft_model(
     lora_dropout = 0,
 )
 
-# 3. Load your SFT dataset (Prompt + Response pairs)
-# dataset = load_dataset("your_dataset_name", split = "train")
+# Loading SFT dataset 
+# dataset = load_dataset("my_dataset", split = "train")
 
-# 4. Set up the SFT Trainer
+# Setting up the SFT Trainer
 sft_trainer = SFTTrainer(
     model = model,
     tokenizer = tokenizer,

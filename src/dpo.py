@@ -5,7 +5,7 @@ from unsloth import FastLanguageModel, PatchDPOTrainer
 from unsloth import is_bfloat16_supported
 PatchDPOTrainer()
 import torch
-from trl import DPOTrainer, DPOConfig  # Changed from TrainingArguments
+from trl import DPOTrainer, DPOConfig  
 
 max_seq_length = 2048 #it will be changed accoring to my dataset
 
@@ -17,7 +17,7 @@ model, tokenizer = FastLanguageModel.from_pretrained(
     load_in_4bit = True,
 )
 
-# Do model patching and add fast LoRA weights
+# Doing model patching and adding fast LoRA weights
 model = FastLanguageModel.get_peft_model(
     model,
     r = 64,
@@ -36,12 +36,11 @@ from datasets import load_dataset
 #  Load my dataset 
 dpo_dataset = load_dataset("my_dataset", split="train")
 
-# 2. Update your DPOTrainer configuration
+#  Updating the DPOTrainer configuration
 dpo_trainer = DPOTrainer(
     model = model,
     ref_model = None,
     args = DPOConfig(
-        # Use DPOConfig
         per_device_train_batch_size = 4,
         gradient_accumulation_steps = 8,
         warmup_ratio = 0.1,
@@ -54,9 +53,9 @@ dpo_trainer = DPOTrainer(
         output_dir = "outputs",
     ),
     beta = 0.1,
-    train_dataset = dpo_dataset, # <--- Pass the variable you just created
+    train_dataset = dpo_dataset, # Ensure this dataset is properly preprocessed for DPO (prompt, chosen, rejected)
     tokenizer = tokenizer,
-    max_length = max_seq_length, # Safely references the variable from earlier
+    max_length = max_seq_length, 
     max_prompt_length = 512,
 )
 
