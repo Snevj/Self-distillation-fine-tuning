@@ -19,7 +19,7 @@ Next step: kaggle notebook setup for cloud training
 - [x] Understand reward functions and reward hacking
 - [x] Practice LLM-as-judge pattern (structured JSON output, temperature=0)
 - [x] Review TRL conventions (SFTTrainer vs DPOTrainer vs SDPOTrainer, dataset column formats)
-- [ ] Set up experiment tracking (Trackio or W&B)
+- [x] Set up experiment tracking (Trackio or W&B)
 
 ### Build Pipeline
 
