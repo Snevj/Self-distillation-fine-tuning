@@ -14,11 +14,11 @@ Next step: Set up environment (trl, peft, bitsandbytes) and verify SDPOTrainer i
 ## Implementation
 
 ### Prerequisites
-- [ ] Learn DPO basics (TRL docs / DPO paper)
-- [ ] Understand teacher/student self-distillation pattern
-- [ ] Understand reward functions and reward hacking
-- [ ] Practice LLM-as-judge pattern (structured JSON output, temperature=0)
-- [ ] Review TRL conventions (SFTTrainer vs DPOTrainer vs SDPOTrainer, dataset column formats)
+- [x] Learn DPO basics (TRL docs / DPO paper)
+- [x] Understand teacher/student self-distillation pattern
+- [x] Understand reward functions and reward hacking
+- [x] Practice LLM-as-judge pattern (structured JSON output, temperature=0)
+- [x] Review TRL conventions (SFTTrainer vs DPOTrainer vs SDPOTrainer, dataset column formats)
 - [ ] Set up experiment tracking (Trackio or W&B)
 
 ### Build Pipeline
