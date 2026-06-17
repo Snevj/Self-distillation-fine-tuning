@@ -3,10 +3,10 @@
 ## Status
 
 ```
-Status: Planning
+Status: Execution
 Last updated: June 14, 2026
-Current stage: Learning prerequisites (DPO basics, TRL conventions, self-distillation pattern)
-Next step: Set up environment (trl, peft, bitsandbytes) and verify SDPOTrainer is available in current TRL version
+Current stage: Setting up the environment
+Next step: checking the availability for SDPO
 ```
 
 ---
