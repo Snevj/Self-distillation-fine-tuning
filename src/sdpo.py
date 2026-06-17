@@ -1,121 +1,94 @@
 import os
 import re
+import torch
 from datasets import load_dataset
 from unsloth import FastLanguageModel
-# Import the official implementation from Hugging Face's TRL ecosystem
-from trl.experimental.sdpo import SDPOConfig, SDPOTrainer 
-import torch
+# Explicitly import from the official TRL experimental branch
+from trl.experimental.sdpo import SDPOConfig, SDPOTrainer
 
-# Trackio will automatically pull these and update your public dashboard live
-os.environ["TRACKIO_PROJECT"] = "sdpo-math-reasoning"
+# 1. Dashboard Mapping Tracking Configuration
+os.environ["TRACKIO_PROJECT"] = "my-sdpo-alignment"
 os.environ["TRACKIO_SPACE_ID"] = "Snevj/my-training-dashboard"
+os.environ["TRL_EXPERIMENTAL_SILENCE"] = "1"
 
 max_seq_length = 2048
 
-
-# DATASET LOADING & STRUCTURING FOR SDPO
-
-print("Loading GSM8K reasoning dataset...")
-# Pull the standard grade-school math dataset directly from Hugging Face
-raw_dataset = load_dataset("gsm8k", "main", split="train")
-
-def format_gsm8k_prompt(example):
-    """
-    SDPO expects a column named 'prompt'. We format the question 
-    so the model knows it needs to think step-by-step.
-    """
-    formatted_prompt = f"Question: {example['question']}\nAnswer: Let's think step by step."
-    
-    # GSM8K stores answers like 'The answer is 42 #### 42'. 
-    # We extract the clean ground-truth number after the '####'
-    clean_target = example['answer'].split('####')[-1].strip()
-    
-    return {
-        "prompt": formatted_prompt,
-        "target_answer": clean_target # We will use this in our reward function
-    }
-
-# Map the dataset to include our formatted prompt and target answers
-dataset = raw_dataset.map(format_gsm8k_prompt)
-
-
-# VERIFIABLE REWARD FUNCTION (The SDPO Feedback Loop)
-
-def math_verification_reward_func(completions, target_answer, **kwargs):
-    """
-    SDPO uses this to check the model's self-generated trajectories.
-    It looks for the final number in the model's response and checks if it matches target_answer.
-    """
-    rewards = []
-    for completion, target in zip(completions, target_answer):
-        # Use regex to grab the very last numerical value in the generated text
-        numbers = re.findall(r"[-+]?\d*\.\d+|\d+", completion)
-        if numbers:
-            predicted_answer = numbers[-1]
-            # If the model's final number matches the ground truth, give a reward of 1.0
-            if predicted_answer.strip() == target.strip():
-                rewards.append(1.0)
-                continue
-        # If it doesn't match or no number was found, reward is 0.0
-        rewards.append(0.0)
-    return rewards
-
-
-# LOAD MODEL VIA UNSLOTH (Memory-Optimized)
-
-print("Loading base SFT model weights...")
+# 2. Load the SFT Baseline Weights generated in Stage 1
 model, tokenizer = FastLanguageModel.from_pretrained(
-    model_name = "outputs-sft", # This targets your completed SFT checkpoint folder
+    model_name = "outputs-sft", # Targets your local Stage 1 output directory
     max_seq_length = max_seq_length,
-    dtype = None, # Automatically handles precision based on your hardware
-    load_in_4bit = True, # Crucial to fit within Kaggle's 16GB VRAM limit
+    dtype = None,
+    load_in_4bit = True,
 )
 
-# Apply LoRA layers to protect base model and keep training lightweight
+# 3. Configure the model adapters for Reinforcement Learning
 model = FastLanguageModel.get_peft_model(
     model,
     r = 16,
-    target_modules = ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
+    target_modules = ["q_proj", "k_proj", "v_proj", "o_proj",
+                      "gate_proj", "up_proj", "down_proj"],
     lora_alpha = 16,
     lora_dropout = 0,
 )
 
+# 4. Define a basic Verifiable Math Reward Function for GSM8K
+def accuracy_reward_fn(completions, answer, **kwargs):
+    rewards = []
+    for completion, gt_answer in zip(completions, answer):
+        # Extract the last numerical sequence block found in the assistant text
+        numbers = re.findall(r'\d+', completion)
+        if numbers and numbers[-1] == str(gt_answer):
+            rewards.append(1.0) # Correct match reward
+        else:
+            rewards.append(0.0) # Error penalty
+    return rewards
 
-# INITIALIZE OFFICIAL SDPO CONFIG & TRAINER
+# 5. Load the small reinforcement learning dataset tracking framework
+dataset = load_dataset("gsm8k", "main", split="train[:1000]")
 
-sdpo_config = SDPOConfig(
-    output_dir = "outputs_sdpo_final",
-    distillation_mode = "topk_logits",       # Evaluates token probability distributions
-    distillation_topk = 100,
-    teacher_model_kind = "ema",              # Exponential Moving Average keeps teacher VRAM minimal
-    
-    # Compute Parameters (Tuned explicitly for Kaggle Dual-T4 stability)
+# Map column names to fit TRL requirements ('prompt' is required by SDPO)
+dataset = dataset.rename_column("question", "prompt")
+
+# 6. Initialize the SDPO Configuration Block
+training_args = SDPOConfig(
+    output_dir = "outputs-sdpo",
+    max_steps = 150,
     per_device_train_batch_size = 2,
     gradient_accumulation_steps = 4,
-    learning_rate = 5e-6,
+    learning_rate = 5e-5,
     logging_steps = 1,
-    max_steps = 150,                         # Kept bounded for free-tier wall-clock stability
-    
-    # Tracking
+    optim = "adamw_8bit",
+    # SDPO Technical parameters tuned for a single 16GB GPU instance
+    distillation_weight = 1.0,
+    distillation_mode = "topk_logits",
+    distillation_topk = 100,
+    teacher_model_kind = "ema",
+    use_vllm = False, # Keeps generation local inside standard RAM memory bounds
     report_to = "trackio",
-    run_name = "sdpo_math_reasoning_run"
+    run_name = "sdpo_alignment_run_01"
 )
 
+# 7. Initialize the Official TRL SDPOTrainer
 trainer = SDPOTrainer(
     model = model,
-    config = sdpo_config,
+    tokenizer = tokenizer,
+    args = training_args,
     train_dataset = dataset,
-    reward_funcs = math_verification_reward_func, # Passes the verification logic to the trainer
+    reward_funcs = [accuracy_reward_fn],
 )
 
-# RUN AND EXPORT
-
-print("Starting Self-Distilled Policy Optimization...")
+# Launch the RL Self-Distillation Optimization execution block
+print("Starting main SDPO training loop...")
 trainer.train()
 
-print("Training complete! Merging and exporting to CPU-optimized GGUF format...")
-# This native Unsloth feature converts your model to a 4-bit GGUF so you can run it on your 8GB Mac
-#gguf(Generic GPT Unified Format) is a new open-source format for LLMs that is optimized for CPU inference. It is supported by the 
-# latest versions of llama.cpp, text-generation-webui, and other popular inference engines.
-model.save_pretrained_gguf("outputs_sdpo_gguf", tokenizer, quantization_method = "q4_k_m")
-print("GGUF Model saved successfully in 'outputs_sdpo_gguf' directory!")
+# Save the final optimized adapter weights 
+model.save_pretrained("outputs-sdpo")
+
+# 8. Automated GGUF Quantization Step
+print("Merging weights and quantizing model into 4-bit GGUF block...")
+model.save_pretrained_gguf(
+    "outputs_sdpo_gguf", 
+    tokenizer, 
+    quantization_method = "q4_k_m"
+)
+print("Pipeline complete! Transferred model binary is ready.")
