@@ -7,9 +7,11 @@ PatchDPOTrainer()
 import torch
 from trl import DPOTrainer, DPOConfig  # Changed from TrainingArguments
 
+max_seq_length = 2048 #it will be changed accoring to my dataset
+
 model, tokenizer = FastLanguageModel.from_pretrained(
     model_name = "unsloth/zephyr-sft-bnb-4bit",
-    max_seq_length = 2048, #it will be changed accoring to your dataset, but set it to 
+    max_seq_length = max_seq_length, #it will be changed accoring to your dataset, but set it to 
                             #2048 for now to avoid reloading the model later
     dtype = None,
     load_in_4bit = True,
@@ -29,11 +31,17 @@ model = FastLanguageModel.get_peft_model(
     random_state = 3407,
     max_seq_length = max_seq_length,
 )
+from datasets import load_dataset
 
+#  Load my dataset 
+dpo_dataset = load_dataset("my_dataset", split="train")
+
+# 2. Update your DPOTrainer configuration
 dpo_trainer = DPOTrainer(
     model = model,
     ref_model = None,
-    args = DPOConfig( # Use DPOConfig
+    args = DPOConfig(
+        # Use DPOConfig
         per_device_train_batch_size = 4,
         gradient_accumulation_steps = 8,
         warmup_ratio = 0.1,
@@ -46,11 +54,11 @@ dpo_trainer = DPOTrainer(
         output_dir = "outputs",
     ),
     beta = 0.1,
-    train_dataset = YOUR_DATASET_HERE,
-    # eval_dataset = YOUR_DATASET_HERE,
+    train_dataset = dpo_dataset, # <--- Pass the variable you just created
     tokenizer = tokenizer,
-    max_length = 1024,
+    max_length = max_seq_length, # Safely references the variable from earlier
     max_prompt_length = 512,
 )
+
 
 dpo_trainer.train()

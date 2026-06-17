@@ -4,6 +4,15 @@ from trl import SFTTrainer
 from transformers import TrainingArguments
 from datasets import load_dataset
 import torch 
+import os
+
+# Groups your SFT, DPO, and SDPO runs into one dashboard
+os.environ["TRACKIO_PROJECT"] = "my-sdpo-alignment"
+
+
+# Trackio will automatically create a live, free web dashboard here!
+os.environ["TRACKIO_SPACE_ID"] = "Snevj/my-training-dashboard"
+
 
 # 1. Load the raw base model (e.g., Llama 3 or Qwen)
 model, tokenizer = FastLanguageModel.from_pretrained(
@@ -48,6 +57,9 @@ sft_trainer = SFTTrainer(
         lr_scheduler_type = "linear",
         seed = 3407,
         output_dir = "outputs-sft",
+
+        report_to = "trackio", 
+        run_name = "sft_model_run_01",
     ),
 )
 
