@@ -1,5 +1,5 @@
 
-from unsloth import FastLanguageModel
+from unsloth import FastLanguageModel, get_chat_template
 from trl import SFTTrainer, SFTConfig
 from transformers import TrainingArguments
 from datasets import load_dataset
@@ -21,7 +21,11 @@ model, tokenizer = FastLanguageModel.from_pretrained(
     dtype = None,
     load_in_4bit = True,
 )
-
+from unsloth.chat_templates import get_chat_template
+tokenizer = get_chat_template(
+    tokenizer,
+    chat_template = "llama-3", 
+)
 # Adding the LoRA adapter to the model
 model = FastLanguageModel.get_peft_model(
     model,
