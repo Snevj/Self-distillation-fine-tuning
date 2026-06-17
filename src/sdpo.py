@@ -13,14 +13,13 @@ os.environ["TRL_EXPERIMENTAL_SILENCE"] = "1"
 
 max_seq_length = 2048
 
-# 2. Load the SFT Baseline Weights generated in Stage 1
+# FIXED: Points directly to the top-level Kaggle working directory where SFT saved the weights
 model, tokenizer = FastLanguageModel.from_pretrained(
-    model_name = "outputs-sft", # Targets your local Stage 1 output directory
+    model_name = "/kaggle/working/outputs-sft", 
     max_seq_length = max_seq_length,
     dtype = None,
     load_in_4bit = True,
 )
-
 # 3. Configure the model adapters for Reinforcement Learning
 model = FastLanguageModel.get_peft_model(
     model,
