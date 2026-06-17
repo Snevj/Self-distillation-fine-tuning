@@ -6,7 +6,7 @@ from datasets import load_dataset
 import torch 
 import os
 
-# Groups your SFT, DPO, and SDPO runs into one dashboard
+# Groups SFT, DPO, and SDPO runs into one dashboard which is automatically created on Hugging Face Spaces
 os.environ["TRACKIO_PROJECT"] = "my-sdpo-alignment"
 
 
@@ -34,16 +34,44 @@ model = FastLanguageModel.get_peft_model(
 
 # Loading SFT dataset 
 # dataset = load_dataset("my_dataset", split = "train")
+# Loading a high-quality math reasoning dataset for SFT
+print("Loading SFT instruction dataset...")
+raw_sft_dataset = load_dataset("microsoft/orca-math-word-problems-200k", split="train[:20000]") # Using the first 20k rows for faster free-tier execution
+
+# Defined the formatting function that wraps data in the chat template
+def formatting_prompts_func(examples):
+    instructions = examples["question"]
+    outputs      = examples["answer"]
+    texts = []
+    
+    for instruction, output in zip(instructions, outputs):
+        # Structured the turn data into the expected ChatML/OpenAI schema
+        messages = [
+            {"role": "user", "content": f"Question: {instruction}\nAnswer: Let's think step by step."},
+            {"role": "assistant", "content": output}
+        ]
+        # Convert the dictionary list into a single tokenizable string raw text format
+        formatted_text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=False)
+        texts.append(formatted_text)
+        
+    return { "text" : texts }
+
+# Mapping the dataset to generate the combined 'text' column required by SFTTrainer
+dataset = raw_sft_dataset.map(formatting_prompts_func, batched=True)
+print("SFT Dataset ready and formatted!")
+
+# Import SFTConfig from TRL
+from trl import SFTConfig
 
 # Setting up the SFT Trainer
 sft_trainer = SFTTrainer(
     model = model,
     tokenizer = tokenizer,
-    # train_dataset = dataset,
-    dataset_text_field = "text",
-    max_seq_length = 2048,
+    train_dataset = dataset,
     dataset_num_proc = 2,
-    args = TrainingArguments(
+    args = SFTConfig(        
+        dataset_text_field = "text", 
+        max_seq_length = 2048,       
         per_device_train_batch_size = 2,
         gradient_accumulation_steps = 4,
         warmup_steps = 5,
@@ -57,11 +85,14 @@ sft_trainer = SFTTrainer(
         lr_scheduler_type = "linear",
         seed = 3407,
         output_dir = "outputs-sft",
-
         report_to = "trackio", 
         run_name = "sft_model_run_01",
     ),
 )
 
-# sft_trainer.train()
-# model.save_pretrained("sft_model_checkpoint")
+# Executing the training loop
+sft_trainer.train()
+
+# Saving the completed SFT weights to a local folder
+model.save_pretrained("outputs-sft")
+print("SFT Training complete and weights saved to 'outputs-sft'!")
