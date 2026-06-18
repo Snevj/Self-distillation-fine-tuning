@@ -1,5 +1,5 @@
 
-from unsloth import FastLanguageModel, get_chat_template
+from unsloth import FastLanguageModel, get_chat_template, is_bfloat16_supported
 from trl import SFTTrainer, SFTConfig
 from transformers import TrainingArguments
 from datasets import load_dataset
@@ -77,28 +77,27 @@ sft_trainer = SFTTrainer(
     model = model,
     tokenizer = tokenizer,
     train_dataset = dataset,
+    dataset_text_field = "text",
+    max_seq_length = max_seq_length,
     dataset_num_proc = 2,
-    args = SFTConfig(        
-        dataset_text_field = "text", 
-        max_seq_length = 2048,       
+    packing = True,  # FIXED: Enables optimized sequence packing for padding-free mode
+    args = TrainingArguments(
         per_device_train_batch_size = 2,
         gradient_accumulation_steps = 4,
         warmup_steps = 5,
         max_steps = 60,
         learning_rate = 2e-4,
-        fp16 = not torch.cuda.is_bf16_supported(),
-        bf16 = torch.cuda.is_bf16_supported(),
+        fp16 = not is_bfloat16_supported(),
+        bf16 = is_bfloat16_supported(),
         logging_steps = 1,
         optim = "adamw_8bit",
         weight_decay = 0.01,
         lr_scheduler_type = "linear",
         seed = 3407,
-        output_dir = "outputs-sft",
-        report_to = "trackio", 
-        run_name = "sft_model_run_01",
+        output_dir = "outputs",
+        report_to = "trackio",
     ),
 )
-
 # Executing the training loop
 sft_trainer.train()
 
