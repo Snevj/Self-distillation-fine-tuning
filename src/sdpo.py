@@ -35,6 +35,8 @@ model, tokenizer = FastLanguageModel.from_pretrained(
     dtype = None,
     load_in_4bit = True,
 )
+from unsloth.chat_templates import get_chat_template
+tokenizer = get_chat_template(tokenizer, chat_template="llama-3")
 
 model = FastLanguageModel.get_peft_model(
     model,
@@ -50,8 +52,19 @@ model = FastLanguageModel.get_peft_model(
 def accuracy_reward_fn(completions, answer, **kwargs):
     rewards = []
     for completion, gt_answer in zip(completions, answer):
-        numbers = re.findall(r'\d+', completion)
-        rewards.append(1.0 if numbers and numbers[-1] == str(gt_answer) else 0.0)
+        # Handle SDPO passing completions as list of message dicts
+        if isinstance(completion, list):
+            text = " ".join(
+                m["content"] for m in completion
+                if isinstance(m, dict) and m.get("role") == "assistant"
+            ) or " ".join(str(m) for m in completion)
+        else:
+            text = str(completion)
+        # GSM8K ground truth format is "... #### 42" — extract just the number
+        gt_match = re.search(r'####\s*(\d+)', str(gt_answer))
+        gt_num = gt_match.group(1) if gt_match else str(gt_answer).strip()
+        numbers = re.findall(r'\d+', text)
+        rewards.append(1.0 if gt_num in numbers else 0.0)
     return rewards
 
 # ── Dataset ────────────────────────────────────────────────────────────────────
