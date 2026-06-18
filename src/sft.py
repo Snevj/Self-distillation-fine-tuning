@@ -6,6 +6,11 @@ from datasets import load_dataset
 import torch 
 import os
 
+import torch
+import os
+
+# FORCE fallback to standard fp16/float16 math since P100 doesn't natively parse bfloat16
+os.environ["UNSLOTH_FORCE_FP16"] = "1"
 # Groups SFT, DPO, and SDPO runs into one dashboard which is automatically created on Hugging Face Spaces
 os.environ["TRACKIO_PROJECT"] = "my-sdpo-alignment"
 

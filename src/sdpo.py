@@ -6,6 +6,9 @@ from unsloth import FastLanguageModel
 # Explicitly import from the official TRL experimental branch
 from trl.experimental.sdpo import SDPOConfig, SDPOTrainer
 
+
+# FORCE fallback to standard fp16/float16 math since P100 doesn't natively parse bfloat16
+os.environ["UNSLOTH_FORCE_FP16"] = "1"
 # 1. Dashboard Mapping Tracking Configuration
 os.environ["TRACKIO_PROJECT"] = "my-sdpo-alignment"
 os.environ["TRACKIO_SPACE_ID"] = "Snevj/my-training-dashboard"
