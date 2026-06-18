@@ -1,7 +1,5 @@
-
 from unsloth import FastLanguageModel, get_chat_template, is_bfloat16_supported
 from trl import SFTTrainer, SFTConfig
-from transformers import TrainingArguments
 from datasets import load_dataset
 import torch 
 import os
@@ -69,19 +67,18 @@ def formatting_prompts_func(examples):
 dataset = raw_sft_dataset.map(formatting_prompts_func, batched=True)
 print("SFT Dataset ready and formatted!")
 
-# Import SFTConfig from TRL
-from trl import SFTConfig
-
 # Setting up the SFT Trainer
+# NOTE: SFTConfig inherits from TrainingArguments — pass all args directly into it,
+# including dataset/packing settings. Do NOT wrap in a separate TrainingArguments.
 sft_trainer = SFTTrainer(
     model = model,
     tokenizer = tokenizer,
     train_dataset = dataset,
-    dataset_text_field = "text",
-    max_seq_length = 2048,
-    dataset_num_proc = 2,
-    packing = True,  # FIXED: Enables optimized sequence packing for padding-free mode
-    args = TrainingArguments(
+    args = SFTConfig(
+        dataset_text_field = "text",
+        max_seq_length = 2048,
+        dataset_num_proc = 2,
+        packing = True,
         per_device_train_batch_size = 2,
         gradient_accumulation_steps = 4,
         warmup_steps = 5,
