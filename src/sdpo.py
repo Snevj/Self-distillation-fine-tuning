@@ -96,7 +96,7 @@ training_args = SDPOConfig(
 # ── Trainer ────────────────────────────────────────────────────────────────────
 trainer = SDPOTrainer(
     model = model,
-    tokenizer = tokenizer,
+    processing_class = tokenizer,
     args = training_args,
     train_dataset = dataset,
     reward_funcs = [accuracy_reward_fn],
