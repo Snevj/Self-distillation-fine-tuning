@@ -28,7 +28,7 @@ from datasets import load_dataset
 model, tokenizer = FastLanguageModel.from_pretrained(
     model_name = "unsloth/llama-3-8b-Instruct-bnb-4bit",
     max_seq_length = 2048,
-    dtype = None,
+    dtype = torch.bfloat16 if is_bfloat16_supported() else torch.float16,
     load_in_4bit = True,
 )
 tokenizer = get_chat_template(tokenizer, chat_template="llama-3")
