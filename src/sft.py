@@ -44,7 +44,7 @@ model = FastLanguageModel.get_peft_model(
 )
 
 print("Loading SFT instruction dataset...")
-raw_sft_dataset = load_dataset("microsoft/orca-math-word-problems-200k", split="train[:20000]")
+raw_sft_dataset = load_dataset("microsoft/orca-math-word-problems-200k", split="train[:200]")
 
 def formatting_prompts_func(examples):
     texts = []
