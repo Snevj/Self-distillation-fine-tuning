@@ -26,7 +26,7 @@ from trl import SFTTrainer, SFTConfig
 from datasets import load_dataset
 
 model, tokenizer = FastLanguageModel.from_pretrained(
-    model_name = "unsloth/llama-3-8b-bnb-4bit",
+    model_name = "unsloth/llama-3-8b-Instruct-bnb-4bit",
     max_seq_length = 2048,
     dtype = None,
     load_in_4bit = True,
